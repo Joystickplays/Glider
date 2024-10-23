@@ -1719,10 +1719,8 @@ local objectCreators = {
 	button = function(self, properties)
 		local button = Glider["_PlaceholderButton"]:Clone()
 		button.Visible = true
-		button.Text = properties.Label or "Unnamed button"
-		if properties.Callback then
-			button.MouseButton1Click:Connect(properties.Callback)
-		end
+		button.Title.Text = properties.Label or "Unnamed button"
+		button.MouseButton1Click:Connect(properties.OnButtonClicked)
 		button.Parent = self.section
 		return button
 	end,
