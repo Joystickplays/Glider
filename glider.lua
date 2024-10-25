@@ -1751,7 +1751,10 @@ local objectCreators = {
 		progressAnimation:Start()
 
 
-		local actualProgress = 50
+		local actualProgress = properties.DefaultValue or 50
+		progressAnimation:SetGoal(
+			UDim2.new(0, ((actualProgress/100 * (200 - 30)) + 30), 1, 0)
+		)
 		local lastPos = UDim2.new()
 
 		progressDragger.Dragged = function(newPos)
