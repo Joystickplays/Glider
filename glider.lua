@@ -108,6 +108,7 @@ local Glider = {
 
 Glider["_glider"].Name = "glider"
 Glider["_glider"].Parent = game.Players.LocalPlayer.PlayerGui
+Glider["_glider"].ResetOnSpawn = false
 
 Glider["_MainWindow"].Active = true
 Glider["_MainWindow"].AnchorPoint = Vector2.new(0.5, 0.5)
