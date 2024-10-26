@@ -107,7 +107,8 @@ local Glider = {
 -- Properties:
 
 Glider["_glider"].Name = "glider"
-Glider["_glider"].Parent = game.Players.LocalPlayer.PlayerGui
+Glider["_glider"].Parent = game:GetService("CoreGui")
+Glider["_glider"].DisplayOrder = 99999
 Glider["_glider"].ResetOnSpawn = false
 
 Glider["_MainWindow"].Active = true
