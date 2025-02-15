@@ -127,9 +127,11 @@ Glider["_UICorner"].CornerRadius = UDim.new(0, 16)
 Glider["_UICorner"].Parent = Glider["_MainWindow"]
 
 Glider["_Border"].Thickness = 2
+Glider["_Border"].Transparency = 0.5
 Glider["_Border"].Name = "Border"
 Glider["_Border"].Parent = Glider["_MainWindow"]
 Glider["_Border"].Enabled = false
+
 
 
 Glider["_Shadow"].Image = "rbxassetid://3523728077"
@@ -178,6 +180,7 @@ Glider["_TItle"].TextColor3 = Color3.fromRGB(255, 255, 255)
 Glider["_TItle"].TextScaled = true
 Glider["_TItle"].TextSize = 14
 Glider["_TItle"].TextWrapped = true
+Glider["_TItle"].RichText = true
 Glider["_TItle"].TextXAlignment = Enum.TextXAlignment.Left
 Glider["_TItle"].BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 Glider["_TItle"].BackgroundTransparency = 1
