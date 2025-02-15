@@ -1,4 +1,4 @@
--- Glider v1.0.0
+-- Glider v1.1.0
 -- Script generated with a GUI2LUA plugin
 
 
@@ -10,6 +10,7 @@ local Glider = {
 	["_glider"] = Instance.new("ScreenGui");
 	["_MainWindow"] = Instance.new("Frame");
 	["_UICorner"] = Instance.new("UICorner");
+	["_Border"] = Instance.new("UIStroke");
 	["_Shadow"] = Instance.new("ImageLabel");
 	["_BarBackground"] = Instance.new("ImageLabel");
 	["_UICorner1"] = Instance.new("UICorner");
@@ -107,7 +108,7 @@ local Glider = {
 -- Properties:
 
 Glider["_glider"].Name = "glider"
-Glider["_glider"].Parent = game:GetService("CoreGui")
+Glider["_glider"].Parent = not game:GetService("RunService"):IsStudio() and game:GetService("CoreGui") or game.Players.LocalPlayer.PlayerGui 
 Glider["_glider"].DisplayOrder = 99999
 Glider["_glider"].ResetOnSpawn = false
 
@@ -124,6 +125,14 @@ Glider["_MainWindow"].Parent = Glider["_glider"]
 
 Glider["_UICorner"].CornerRadius = UDim.new(0, 16)
 Glider["_UICorner"].Parent = Glider["_MainWindow"]
+
+Glider["_Border"].Thickness = 2
+Glider["_Border"].Transparency = 0.5
+Glider["_Border"].Name = "Border"
+Glider["_Border"].Parent = Glider["_MainWindow"]
+Glider["_Border"].Enabled = false
+
+
 
 Glider["_Shadow"].Image = "rbxassetid://3523728077"
 Glider["_Shadow"].ImageColor3 = Color3.fromRGB(24.00000236928463, 24.00000236928463, 24.00000236928463)
@@ -171,6 +180,7 @@ Glider["_TItle"].TextColor3 = Color3.fromRGB(255, 255, 255)
 Glider["_TItle"].TextScaled = true
 Glider["_TItle"].TextSize = 14
 Glider["_TItle"].TextWrapped = true
+Glider["_TItle"].RichText = true
 Glider["_TItle"].TextXAlignment = Enum.TextXAlignment.Left
 Glider["_TItle"].BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 Glider["_TItle"].BackgroundTransparency = 1
@@ -1685,7 +1695,15 @@ local gliderModule = {}
 function gliderModule.set(windowProperties)
 
 	Glider["_TItle"].Text = windowProperties.title
+	Glider["_TItle"].TextColor3 = windowProperties.titleTextColor or Color3.fromRGB(255, 255, 255)
 	Glider["_BarBackground"].Image = windowProperties.barBackgroundImage or ""
+	if windowProperties.barBackgroundImage then
+		Glider["_BarBackground"].Visible = true
+	end
+	Glider["_Border"].Color = windowProperties.barBorderColor or Color3.fromRGB(0, 0, 0)
+	if windowProperties.barBorderColor then
+		Glider["_Border"].Enabled = true
+	end
 end
 
 function gliderModule.newSection(sectionName)
@@ -1745,33 +1763,89 @@ local objectCreators = {
 
 		local sbt = require(Glider["_glider"].SBT)
 		local dgb = require(Glider["_glider"].DraggableObject)
+		local UserInputService = game:GetService("UserInputService")
 
 		local progressDragger = dgb.new(seekbar.Seekbar.Progress, nil, false, true)
 		progressDragger:Enable()
 
-		local progressAnimation = sbt.new(seekbar.Seekbar.Progress, "Size", table.unpack(sbt.fromDurationAndBounce(0.4, 0.2)))
+		local progressAnimation = sbt.new(seekbar.Seekbar.Progress, "Size", table.unpack(sbt.fromDurationAndBounce(0.4, 0.05)))
 		progressAnimation:Start()
 
+		local maxValue = properties.MaxValue or 100
+		local snapInterval = properties.SnapInterval or 1 
+		local pullMultiplier = properties.PullMultiplier or 0.3
 
-		local actualProgress = properties.DefaultValue or 50
-		progressAnimation:SetGoal(
-			UDim2.new(0, ((actualProgress/100 * (200 - 30)) + 30), 1, 0)
-		)
-		local lastPos = UDim2.new()
+		local minOffset = 30
+		local maxOffset = 200
+		local sliderWidth = maxOffset - minOffset
+
+		local actualProgress = properties.DefaultValue or (maxValue / 2)
+		actualProgress = math.round(actualProgress / snapInterval) * snapInterval
+
+		local function updateProgressVisual(offset)
+			progressAnimation:SetGoal(UDim2.new(0, offset, 1, 0))
+		end
+
+		local function setVisualToProgress(progress)
+			local offset = (progress / maxValue) * sliderWidth + minOffset
+			updateProgressVisual(offset)
+		end
+
+		setVisualToProgress(actualProgress)
+
+		local initialDragOffset = 0
+
+		progressDragger.DragStarted = function()
+			local mouseLocation = UserInputService:GetMouseLocation()
+			local sliderAbsX = seekbar.Seekbar.AbsolutePosition.X
+			local currentOffset = (actualProgress / maxValue) * sliderWidth + minOffset
+			local progressAbsX = sliderAbsX + currentOffset
+			initialDragOffset = mouseLocation.X - progressAbsX
+		end
 
 		progressDragger.Dragged = function(newPos)
-			actualProgress = actualProgress + (newPos - lastPos).X.Offset /2
-			lastPos = newPos
-			actualProgress = math.clamp(actualProgress, 0, 100)
+			local mouseLocation = UserInputService:GetMouseLocation()
+			local effectiveMouseX = mouseLocation.X - initialDragOffset
+
+			local sliderAbsX = seekbar.Seekbar.AbsolutePosition.X
+			local trackStart = sliderAbsX + minOffset
+			local trackEnd = sliderAbsX + maxOffset
+
+			local clampedEffectiveX = math.clamp(effectiveMouseX, trackStart, trackEnd)
+			local relativeOffset = clampedEffectiveX - sliderAbsX
+
+			local ratio = (relativeOffset - minOffset) / sliderWidth
+			local rawProgress = ratio * maxValue
+
+			local snappedProgress = math.round(rawProgress / snapInterval) * snapInterval
+
+			local pulledProgress = snappedProgress + (rawProgress - snappedProgress) * pullMultiplier
+			local pulledOffset = (pulledProgress / maxValue) * sliderWidth + minOffset
+
+			properties.OnProgressChanged(snappedProgress)
+			progressAnimation:SetGoal(UDim2.new(0, pulledOffset, 1, 0))
+		end
+
+		progressDragger.DragEnded = function()
+			local mouseLocation = UserInputService:GetMouseLocation()
+			local effectiveMouseX = mouseLocation.X - initialDragOffset
+
+			local sliderAbsX = seekbar.Seekbar.AbsolutePosition.X
+			local trackStart = sliderAbsX + minOffset
+			local trackEnd = sliderAbsX + maxOffset
+
+			local clampedEffectiveX = math.clamp(effectiveMouseX, trackStart, trackEnd)
+			local relativeOffset = clampedEffectiveX - sliderAbsX
+
+			local ratio = (relativeOffset - minOffset) / sliderWidth
+			local rawProgress = ratio * maxValue
+			local snappedProgress = math.round(rawProgress / snapInterval) * snapInterval
+			actualProgress = snappedProgress
+
+			local snappedOffset = (snappedProgress / maxValue) * sliderWidth + minOffset
 
 			properties.OnProgressChanged(actualProgress)
-
-			progressAnimation:SetGoal(
-				UDim2.new(0, ((actualProgress/100 * (200 - 30)) + 30), 1, 0)
-			)
-		end
-		progressDragger.DragEnded = function()
-			lastPos = UDim2.new()
+			progressAnimation:SetGoal(UDim2.new(0, snappedOffset, 1, 0))
 		end
 
 		return seekbar
@@ -1868,6 +1942,5 @@ function gliderModule:newObject(type, properties)
 		error("Invalid object type: " .. tostring(type))
 	end
 end
-
 
 return gliderModule
