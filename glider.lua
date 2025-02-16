@@ -1943,4 +1943,6 @@ function gliderModule:newObject(type, properties)
 	end
 end
 
+gliderModule.components = Glider
+
 return gliderModule
